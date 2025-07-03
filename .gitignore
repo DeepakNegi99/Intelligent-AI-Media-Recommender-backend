@@ -1,0 +1,22 @@
+# Build artifacts
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.log
+
+# VS Code settings
+.vscode/
+
+# SQLite files (optional)
+*.db
+
+# Others
+*.pdb
+*.cache
+/Backend/.vs/Backend/CopilotIndices/17.12.53.23981
+/Backend/.vs/Backend
+/Backend/.vs/ProjectEvaluation
+Backend/appsettings.Development.json
