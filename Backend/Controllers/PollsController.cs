@@ -44,6 +44,31 @@ namespace Backend.Controllers
             }
         }
 
+        [HttpPatch("updateVotes")]
+        public async Task<IActionResult> UpdateVote([FromBody] Dictionary<string, string> body)
+        {
+            if (!body.TryGetValue("selectedOption", out var selectedOption) || string.IsNullOrWhiteSpace(selectedOption))
+                return BadRequest("selectedOption is required.");
+
+            try
+            {
+                var updatedPoll = await _pollService.UpdateVoteAsync(selectedOption);
+                if (updatedPoll == null)
+                    return BadRequest("No poll found.");
+
+                return Ok(updatedPoll);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch
+            {
+                return BadRequest("Something went wrong while updating the vote.");
+            }
+        }
+
+
     }
 
 
