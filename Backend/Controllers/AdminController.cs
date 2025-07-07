@@ -1,46 +1,61 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
-using Microsoft.Extensions.Options;
+﻿using CsvHelper;
+using System.Globalization;
+using System.IO;
+using Microsoft.AspNetCore.Http;
 using Backend.Models;
+using Microsoft.AspNetCore.Mvc;
+using System.Formats.Asn1;
+using MongoDB.Driver;
 
 namespace Backend.Controllers
 {
-    [ApiController]
-    [Route("admin")]
     public class AdminController : ControllerBase
     {
-        private readonly IMongoCollection<Book> _books;
-        private readonly IMongoCollection<Movie> _movies;
-        private readonly IMongoCollection<TVSeries> _tvSeries;
+        private readonly IMongoCollection<Movie> _movies; // Updated type  
+        private readonly IMongoCollection<Book> _books; // Updated type  
+        private readonly IMongoCollection<TVSeries> _tvSeries; // Added field  
 
-        public AdminController(IOptions<MongoDBSettings> settings)
+        public AdminController(IMongoDatabase database) // Constructor to initialize collections  
         {
-            var db = new MongoClient(settings.Value.ConnectionString)
-                         .GetDatabase(settings.Value.DatabaseName);
-            _books = db.GetCollection<Book>("Books");
-            _movies = db.GetCollection<Movie>("Movies");
-            _tvSeries = db.GetCollection<TVSeries>("TVSeries");
+            _movies = database.GetCollection<Movie>("Movies");
+            _books = database.GetCollection<Book>("Books");
+            _tvSeries = database.GetCollection<TVSeries>("TVSeries");
         }
 
-        [HttpPost("books")]
-        public async Task<IActionResult> UploadBook([FromBody] Book book)
+        [HttpPost("upload-csv/{type}")]
+        public async Task<IActionResult> UploadCsv(string type, IFormFile file)
         {
-            await _books.InsertOneAsync(book);
-            return StatusCode(201, "Book uploaded.");
-        }
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded.");
 
-        [HttpPost("movies")]
-        public async Task<IActionResult> UploadMovie([FromBody] Movie movie)
-        {
-            await _movies.InsertOneAsync(movie);
-            return StatusCode(201, "Movie uploaded.");
-        }
+            using var reader = new StreamReader(file.OpenReadStream());
+            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
 
-        [HttpPost("tvseries")]
-        public async Task<IActionResult> UploadSeries([FromBody] TVSeries series)
-        {
-            await _tvSeries.InsertOneAsync(series);
-            return StatusCode(201, "TV Series uploaded.");
+            try
+            {
+                if (type == "books")
+                {
+                    var records = csv.GetRecords<Book>().ToList();
+                    await _books.InsertManyAsync(records);
+                }
+                else if (type == "movies")
+                {
+                    var records = csv.GetRecords<Movie>().ToList();
+                    await _movies.InsertManyAsync(records);
+                }
+                else if (type == "tvseries")
+                {
+                    var records = csv.GetRecords<TVSeries>().ToList();
+                    await _tvSeries.InsertManyAsync(records);
+                }
+                else return BadRequest("Invalid type.");
+
+                return Ok("CSV uploaded successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Upload failed: " + ex.Message);
+            }
         }
     }
 }
