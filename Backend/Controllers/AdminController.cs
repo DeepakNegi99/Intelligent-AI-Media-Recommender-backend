@@ -23,8 +23,9 @@ namespace Backend.Controllers
         }
 
         [HttpPost("upload-csv/{type}")]
-        public async Task<IActionResult> UploadCsv(string type, IFormFile file)
+        public async Task<IActionResult> UploadCsv(string type, IFormFile file, [FromHeader(Name = "x-admin-token")] string token)
         {
+            if (token != "your-dev-token") return Unauthorized("Invalid token");
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
 
